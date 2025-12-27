@@ -51,10 +51,20 @@ mvn spring-boot:run
 🧩 Integration
 ==================
 
-- This service integrates with:
+ This service integrates with:
+ ______________________________
 
 - API Gateway → JWT validation
-
 - Eureka Server → Service discovery
-
 - All business services → Identity & roles
+
+  
+👨‍💻 Author
+=============
+
+Irakarama Bergerac
+
+Online Voting Microservice System
+
+  
+
