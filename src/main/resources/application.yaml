@@ -1,0 +1,87 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/vote_authdb
+    username: postgres
+    password: kigali45
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  cloud:
+    function:
+      # ✅ Explicitly define all functional beans
+      definition: voterCreationSucceeded;voterCreationFailed;voterUpdateSucceeded;voterUpdateFailed;userCreated;userUpdated;userDeleted
+
+    stream:
+      bindings:
+        # ------------------ User events ------------------
+        userCreated-out-0:
+          destination: user-created
+          contentType: application/json
+
+        userUpdated-out-0:
+          destination: user-updated
+          contentType: application/json
+
+        userDeleted-out-0:
+          destination: user-deleted
+          contentType: application/json
+
+        # ------------------ Voter events ------------------
+        voterCreationSucceeded-in-0:
+          destination: voter-creation-succeeded
+          group: auth-service-voter-succeeded
+          contentType: application/json
+
+
+        voterCreationFailed-in-0:
+          destination: voter-creation-failed
+          group: auth-service-voter-failed
+          contentType: application/json
+
+        
+        voterUpdateSucceeded-in-0:
+          destination: voter-update-succeeded
+          group: auth-service-voter-update-succeeded
+          contentType: application/json
+
+        voterUpdateFailed-in-0:
+          destination: voter-update-failed
+          group: auth-service-voter-update-failed
+          contentType: application/json
+
+
+      kafka:
+        binder:
+          brokers: localhost:9092
+          auto-create-topics: true
+          configuration:
+            spring.json.trusted.packages: com.online.voting.events
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  health:
+    kafka:
+      enabled: true
+    db:
+      enabled: true
+
+logging:
+  level:
+    org.springframework.cloud.stream: DEBUG
+    org.springframework.integration: DEBUG
