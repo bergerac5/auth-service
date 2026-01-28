@@ -28,6 +28,7 @@ public class AuthService {
     // for crypting password
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final JwtUtil jwtUtil;
+
     private final StreamBridge streamBridge;
 
     public AuthService(UserRepository userRepository, JwtUtil jwtUtil, StreamBridge streamBridge) {

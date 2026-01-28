@@ -31,6 +31,7 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/auth/update/**", "/auth/delete/**").hasRole("ADMIN")
                         .requestMatchers("/auth/users/**").hasRole("ADMIN")
+                        .requestMatchers("/auth/candidates/**").hasAnyRole("ADMIN", "CANDIDATE")
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

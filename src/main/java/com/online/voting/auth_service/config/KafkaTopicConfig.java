@@ -43,4 +43,38 @@ public class KafkaTopicConfig {
         return new NewTopic("voter-update-failed", 3, (short) 1);
     }
 
+    /*
+     * ===========================================================================
+     * 
+     * ----------------------------- CandidateTopic --------------------------------
+     * 
+     * =============================================================================
+     * =
+     */
+
+    @Bean
+    public NewTopic candidateCreatedTopic() {
+        return new NewTopic("candidate-created", 3, (short) 1);
+    }
+
+    @Bean
+    public NewTopic candidateUpdatedTopic() {
+        return new NewTopic("candidate-updated", 3, (short) 1);
+    }
+
+    public NewTopic candidateDeletedTopic() {
+        return new NewTopic("candidate-deleted", 3, (short) 1);
+    }
+
+    // ------Create candidate feedback consumer----------
+    @Bean
+    public NewTopic candidateCreationSucceededTopic() {
+        return new NewTopic("candidate-creation-succeeded", 3, (short) 1);
+    }
+
+    @Bean
+    public NewTopic candidateCreationFailedTopic() {
+        return new NewTopic("candidate-creation-failed", 3, (short) 1);
+    }
+
 }

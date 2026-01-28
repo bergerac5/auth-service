@@ -22,7 +22,8 @@ spring:
   cloud:
     function:
       # ✅ Explicitly define all functional beans
-      definition: voterCreationSucceeded;voterCreationFailed;voterUpdateSucceeded;voterUpdateFailed;userCreated;userUpdated;userDeleted
+      definition: voterCreationSucceeded;voterCreationFailed;voterUpdateSucceeded;voterUpdateFailed;userCreated;userUpdated;userDeleted;
+                  candidateCreation;candidateCreationSucceeded;candidateCreationFailed
 
     stream:
       bindings:
@@ -61,7 +62,25 @@ spring:
           destination: voter-update-failed
           group: auth-service-voter-update-failed
           contentType: application/json
+        #=========================================================================
 
+        # ------------------ Candidate events ------------------
+        candidateCreated-out-0:
+          destination: candidate-created
+          contentType: application/json
+
+        # ------------------ Candidate events ------------------
+        candidateCreationSucceeded-in-0:
+          destination: candidate-creation-succeeded
+          group: auth-service-candidate-succeeded
+          contentType: application/json
+
+
+        candidateCreationFailed-in-0:
+          destination: candidate-creation-failed
+          group: auth-service-candidate-failed
+          contentType: application/json
+        
 
       kafka:
         binder:
