@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,6 +22,7 @@ import com.online.voting.auth_service.dto.UserRegisterRequest;
 import com.online.voting.auth_service.dto.UserResponse;
 import com.online.voting.auth_service.dto.UserUpdateRequest;
 import com.online.voting.auth_service.model.User;
+import com.online.voting.auth_service.repository.UserRepository;
 import com.online.voting.auth_service.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -30,9 +32,11 @@ import jakarta.validation.Valid;
 public class AuthController {
 
         private final AuthService authService;
+        private final UserRepository userRepository;
 
-        public AuthController(AuthService authService) {
+        public AuthController(AuthService authService, UserRepository userRepository) {
                 this.authService = authService;
+                this.userRepository = userRepository;
         }
 
         @PostMapping("/register")
@@ -88,9 +92,18 @@ public class AuthController {
 
         @DeleteMapping("/delete/{id}")
         public ResponseEntity<ApiResponse<String>> deleteUser(@PathVariable UUID id) {
-                authService.deleteUser(id);
-                return ResponseEntity.ok(
-                                ApiResponse.success("User deleted successfully", null));
+
+                boolean existsById = userRepository.existsById(id);
+                if (existsById) {
+                        authService.deleteUser(id);
+                        return ResponseEntity.ok(
+                                        ApiResponse.success("User deleted successfully", null));
+                } else {
+                        return ResponseEntity
+                                        .status(HttpStatus.NOT_FOUND)
+                                        .body(ApiResponse.error("User not found"));
+                }
+
         }
 
         @GetMapping("/users")

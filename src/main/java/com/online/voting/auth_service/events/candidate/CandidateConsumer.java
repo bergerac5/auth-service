@@ -9,6 +9,8 @@ import com.online.voting.auth_service.model.RegistrationStatus;
 import com.online.voting.auth_service.repository.UserRepository;
 import com.online.voting.events.candidate.CandidateCreationFailedEvent;
 import com.online.voting.events.candidate.CandidateCreationSucceededEvent;
+import com.online.voting.events.candidate.CandidateUpdateFailedEvent;
+import com.online.voting.events.candidate.CandidateUpdateSucceededEvent;
 
 @Configuration
 public class CandidateConsumer {
@@ -27,7 +29,7 @@ public class CandidateConsumer {
 
             userRepository.findById(event.getUserId()).ifPresent(user -> {
                 user.setStatus(RegistrationStatus.FAILED);
-                userRepository.save(user); // rollback
+                userRepository.save(user);
                 System.out.println("[AUTH] Rolled back user: " + user.getId());
             });
         };
@@ -36,6 +38,30 @@ public class CandidateConsumer {
     @Bean
     public Consumer<CandidateCreationSucceededEvent> candidateCreationSucceeded() {
         System.out.println("============= CandidateCreationSucceededEvent ===============");
+        return event -> userRepository.findById(event.getUserId()).ifPresent(user -> {
+            user.setStatus(RegistrationStatus.ACTIVE);
+            userRepository.save(user);
+            System.out.println("[AUTH] User activated: " + user.getId());
+        });
+    }
+
+    @Bean
+    public Consumer<CandidateUpdateFailedEvent> candidateUpdateFailed() {
+        return event -> {
+            System.err.println("[AUTH] Candidate update failed for userId: " + event.getUserId()
+                    + " reason: " + event.getReason());
+
+            userRepository.findById(event.getUserId()).ifPresent(user -> {
+                user.setStatus(RegistrationStatus.FAILED_UPDATE);
+                userRepository.save(user); // rollback
+                System.out.println("[AUTH] Rolled back user: " + user.getId());
+            });
+        };
+    }
+
+    @Bean
+    public Consumer<CandidateUpdateSucceededEvent> candidateUpdateSucceeded() {
+        System.out.println("============= CandidateUpdateSucceededEvent ===============");
         return event -> userRepository.findById(event.getUserId()).ifPresent(user -> {
             user.setStatus(RegistrationStatus.ACTIVE);
             userRepository.save(user);

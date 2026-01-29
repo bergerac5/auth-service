@@ -77,4 +77,14 @@ public class KafkaTopicConfig {
         return new NewTopic("candidate-creation-failed", 3, (short) 1);
     }
 
+    @Bean
+    public NewTopic candidateUpdateSucceededTopic() {
+        return new NewTopic("candidate-update-succeeded", 3, (short) 1);
+    }
+
+    @Bean
+    public NewTopic candidateUpdateFailedTopic() {
+        return new NewTopic("candidate-update-failed", 3, (short) 1);
+    }
+
 }
