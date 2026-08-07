@@ -1,5 +1,6 @@
 package com.online.voting.auth_service.service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -8,10 +9,14 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.online.voting.auth_service.dto.UserRegisterRequest;
 import com.online.voting.auth_service.dto.UserUpdateRequest;
+import com.online.voting.auth_service.exception.DuplicateResourceException;
+import com.online.voting.auth_service.model.OutboxEvent;
 import com.online.voting.auth_service.model.RegistrationStatus;
 import com.online.voting.auth_service.model.User;
+import com.online.voting.auth_service.repository.OutboxRepository;
 import com.online.voting.auth_service.repository.UserRepository;
 import com.online.voting.auth_service.security.JwtUtil;
 import com.online.voting.events.UserCreatedEvent;
@@ -30,21 +35,32 @@ public class AuthService {
     private final JwtUtil jwtUtil;
 
     private final StreamBridge streamBridge;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final OutboxRepository outboxRepository;
 
-    public AuthService(UserRepository userRepository, JwtUtil jwtUtil, StreamBridge streamBridge) {
+    public AuthService(UserRepository userRepository, JwtUtil jwtUtil, StreamBridge streamBridge,
+            OutboxRepository outboxRepository) {
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
         this.streamBridge = streamBridge;
+        this.outboxRepository = outboxRepository;
     }
 
     // for registering a new user
     @Transactional
     public User register(UserRegisterRequest request) {
 
-        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
-            throw new IllegalArgumentException("Username already exists");
+        // 1. Check username uniqueness (ACTIVE only)
+        boolean exists = userRepository
+                .existsByUsernameAndStatus(request.getUsername(), RegistrationStatus.ACTIVE);
+
+        if (exists) {
+            throw new DuplicateResourceException("Username already exists");
         }
 
+        UUID correlationId = UUID.randomUUID();
+
+        // 2. Create user
         User user = new User();
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -53,7 +69,10 @@ public class AuthService {
 
         User saved = userRepository.save(user);
 
+        // 3. Create event
         UserCreatedEvent event = new UserCreatedEvent(
+                UUID.randomUUID(), // eventId
+                correlationId,
                 saved.getId(),
                 request.getNationalId(),
                 saved.getUsername(),
@@ -61,12 +80,17 @@ public class AuthService {
                 request.getLastName(),
                 saved.getRole().name());
 
-        boolean sent = streamBridge.send("userCreated-out-0", event);
-        if (!sent) {
-            throw new IllegalStateException("Failed to publish UserCreatedEvent");
-        } else {
-            System.out.println("UserCreatedEvent published successfully:" + event);
-        }
+        // 4. Outbox event (atomic with user)
+        OutboxEvent outbox = new OutboxEvent();
+        outbox.setAggregateType("USER");
+        outbox.setAggregateId(saved.getId());
+        outbox.setEventType("USER_CREATED");
+        outbox.setPayload(convertToJson(event));
+        outbox.setStatus("PENDING");
+        outbox.setCreatedAt(Instant.now());
+        outbox.setCorrelationId(correlationId); // IMPORTANT
+
+        outboxRepository.save(outbox);
 
         return saved;
     }
@@ -80,7 +104,7 @@ public class AuthService {
                 userRepository.findByUsername(request.getUsername())
                         .filter(u -> !u.getId().equals(id))
                         .ifPresent(u -> {
-                            throw new IllegalArgumentException("Username already exists");
+                            throw new DuplicateResourceException("Username already exists");
                         });
                 existingUser.setUsername(request.getUsername());
             }
@@ -155,6 +179,16 @@ public class AuthService {
 
     public Optional<User> searchByUsername(String username) {
         return userRepository.findByUsername(username);
+    }
+
+    //
+
+    private String convertToJson(Object obj) {
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

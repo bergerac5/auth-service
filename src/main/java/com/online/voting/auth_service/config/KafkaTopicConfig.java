@@ -62,6 +62,7 @@ public class KafkaTopicConfig {
         return new NewTopic("candidate-updated", 3, (short) 1);
     }
 
+    @Bean
     public NewTopic candidateDeletedTopic() {
         return new NewTopic("candidate-deleted", 3, (short) 1);
     }
